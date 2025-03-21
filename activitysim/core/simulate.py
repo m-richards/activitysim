@@ -430,6 +430,8 @@ def get_segment_coefficients(
             assert not coefficients_col.isnull().any()
 
         coefficients_dict = coefficients_col.to_dict()
+    
+    coefficients_dict['SEGMENT_NAME'] = segment_name
 
     return coefficients_dict
 
