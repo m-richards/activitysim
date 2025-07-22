@@ -661,6 +661,7 @@ def run_location_simulate(
         "timeframe": "timeless",
         "reindex": reindex,
         "land_use": state.get_dataframe("land_use"),
+        "accessibility": state.get_dataframe("accessibility"),
     }
     locals_d.update(model_settings.CONSTANTS or {})
 
