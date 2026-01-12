@@ -1,4 +1,4 @@
-# ActivitySim
+﻿# ActivitySim
 # See full license in LICENSE.txt.
 from __future__ import annotations
 
@@ -387,12 +387,12 @@ def trip_scheduling_choice(
     )
     tours_df[LAST_OB_STOP] = (
         last_outbound_trip[["tour_id", "origin"]]
-        .set_index("tour_id")
+        .set_index("tour_id")["origin"]
         .reindex(tours.index)
     )
     tours_df[FIRST_IB_STOP] = (
         first_inbound_trip[["tour_id", "destination"]]
-        .set_index("tour_id")
+        .set_index("tour_id")["destination"]
         .reindex(tours.index)
     )
 
@@ -436,3 +436,4 @@ def trip_scheduling_choice(
     )
 
     state.add_table("tours", tours_df)
+

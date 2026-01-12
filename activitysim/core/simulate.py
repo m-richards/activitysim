@@ -1,4 +1,4 @@
-# ActivitySim
+﻿# ActivitySim
 # See full license in LICENSE.txt.
 from __future__ import annotations
 
@@ -21,6 +21,7 @@ from activitysim.core import (
     configuration,
     logit,
     pathbuilder,
+    timing,
     tracing,
     util,
     workflow,
@@ -32,12 +33,14 @@ from activitysim.core.configuration.logit import (
     TemplatedLogitComponentSettings,
 )
 from activitysim.core.estimation import Estimator
+from activitysim.core.fast_eval import fast_eval
 from activitysim.core.simulate_consts import (
     ALT_LOSER_UTIL,
     SPEC_DESCRIPTION_NAME,
     SPEC_EXPRESSION_NAME,
     SPEC_LABEL_NAME,
 )
+from activitysim.core.exceptions import ModelConfigurationError
 
 logger = logging.getLogger(__name__)
 
@@ -185,13 +188,13 @@ def read_model_coefficients(
             f"duplicate coefficients in {file_path}\n"
             f"{coefficients[coefficients.index.duplicated(keep=False)]}"
         )
-        raise RuntimeError(f"duplicate coefficients in {file_path}")
+        raise ModelConfigurationError(f"duplicate coefficients in {file_path}")
 
-    if coefficients.value.isnull().any():
+    if coefficients.isnull().any().any():
         logger.warning(
-            f"null coefficients in {file_path}\n{coefficients[coefficients.value.isnull()]}"
+            f"null coefficients in {file_path}\n{coefficients[coefficients.isnull().any(axis=1)]}"
         )
-        raise RuntimeError(f"null coefficients in {file_path}")
+        raise ModelConfigurationError(f"null coefficients in {file_path}")
 
     return coefficients
 
@@ -248,7 +251,7 @@ def spec_for_segment(
         try:
             assert (spec.astype(float) == spec).all(axis=None)
         except (ValueError, AssertionError):
-            raise RuntimeError(
+            raise ModelConfigurationError(
                 f"No coefficient file specified for {spec_file_name} "
                 f"but not all spec column values are numeric"
             ) from None
@@ -318,7 +321,7 @@ def dump_mapped_coefficients(state: workflow.State, model_settings):
     template_df = read_model_coefficient_template(state.filesystem, model_settings)
 
     for c in template_df.columns:
-        template_df[c] = template_df[c].map(coefficients_df.value)
+        template_df[c] = template_df[c].map(coefficients_df.iloc[:, 0])
 
     coefficients_template_file_name = model_settings["COEFFICIENT_TEMPLATE"]
     file_path = state.get_output_file_path(coefficients_template_file_name)
@@ -393,7 +396,7 @@ def get_segment_coefficients(
             FutureWarning,
         )
     else:
-        raise RuntimeError("No COEFFICIENTS setting in model_settings")
+        raise ModelConfigurationError("No COEFFICIENTS setting in model_settings")
 
     if legacy:
         constants = config.get_model_constants(model_settings)
@@ -418,7 +421,7 @@ def get_segment_coefficients(
         coefficients_df = filesystem.read_model_coefficients(model_settings)
         template_df = read_model_coefficient_template(filesystem, model_settings)
         coefficients_col = (
-            template_df[segment_name].map(coefficients_df.value).astype(float)
+            template_df[segment_name].map(coefficients_df.iloc[:, 0]).astype(float)
         )
 
         if coefficients_col.isnull().any():
@@ -430,7 +433,7 @@ def get_segment_coefficients(
             assert not coefficients_col.isnull().any()
 
         coefficients_dict = coefficients_col.to_dict()
-    
+
     coefficients_dict['SEGMENT_NAME'] = segment_name
 
     return coefficients_dict
@@ -629,6 +632,22 @@ def eval_utilities(
     if utilities is None or estimator or sharrow_enabled == "test":
         trace_label = tracing.extend_trace_label(trace_label, "eval_utils")
 
+        if (
+            state.settings.expression_profile
+            and compute_settings.performance_log is None
+        ):
+            perf_log_file = Path(trace_label + ".log")
+        elif (
+            state.settings.expression_profile is False
+            or compute_settings.performance_log is False
+        ):
+            perf_log_file = None
+        elif compute_settings.performance_log is True:
+            perf_log_file = Path(trace_label + ".log")
+        else:
+            perf_log_file = compute_settings.performance_log
+        performance_timer = timing.EvalTiming(perf_log_file)
+
         # avoid altering caller's passed-in locals_d parameter (they may be looping)
         locals_dict = assign.local_utilities(state)
 
@@ -655,10 +674,13 @@ def eval_utilities(
                     with warnings.catch_warnings(record=True) as w:
                         # Cause all warnings to always be triggered.
                         warnings.simplefilter("always")
-                        if expr.startswith("@"):
-                            expression_value = eval(expr[1:], globals_dict, locals_dict)
-                        else:
-                            expression_value = choosers.eval(expr)
+                        with performance_timer.time_expression(expr):
+                            if expr.startswith("@"):
+                                expression_value = eval(
+                                    expr[1:], globals_dict, locals_dict
+                                )
+                            else:
+                                expression_value = fast_eval(choosers, expr)
 
                         if len(w) > 0:
                             for wrn in w:
@@ -687,6 +709,7 @@ def eval_utilities(
                 expression_values[i] = expression_value
                 i += 1
 
+        performance_timer.write_log(state)
         chunk_sizer.log_df(trace_label, "expression_values", expression_values)
 
         if estimator:
@@ -841,14 +864,16 @@ def eval_utilities(
     chunk_sizer.log_df(trace_label, "utilities", None)
 
     end_time = time.time()
-    logger.info(
+    logger.debug(
         f"simulate.eval_utils runtime: {timedelta(seconds=end_time - start_time)} {trace_label}"
     )
     timelogger.summary(logger, "simulate.eval_utils timing")
     return utilities
 
 
-def eval_variables(state: workflow.State, exprs, df, locals_d=None):
+def eval_variables(
+    state: workflow.State, exprs, df, locals_d=None, trace_label: str | None = None
+):
     """
     Evaluate a set of variable expressions from a spec in the context
     of a given data table.
@@ -875,6 +900,9 @@ def eval_variables(state: workflow.State, exprs, df, locals_d=None):
     locals_d : Dict
         This is a dictionary of local variables that will be the environment
         for an evaluation of an expression that begins with @
+    trace_label : str
+        The trace label to use for performance logging. If None, performance
+        logging is not activated.
 
     Returns
     -------
@@ -909,13 +937,20 @@ def eval_variables(state: workflow.State, exprs, df, locals_d=None):
 
         return a
 
+    if state.settings.expression_profile and trace_label:
+        perf_log_file = Path(trace_label + ".log")
+    else:
+        perf_log_file = None
+    performance_timer = timing.EvalTiming(perf_log_file)
+
     values = OrderedDict()
     for expr in exprs:
         try:
-            if expr.startswith("@"):
-                expr_values = to_array(eval(expr[1:], globals_dict, locals_dict))
-            else:
-                expr_values = to_array(df.eval(expr))
+            with performance_timer.time_expression(expr):
+                if expr.startswith("@"):
+                    expr_values = to_array(eval(expr[1:], globals_dict, locals_dict))
+                else:
+                    expr_values = to_array(fast_eval(df, expr))
             # read model spec should ensure uniqueness, otherwise we should uniquify
             assert expr not in values
             values[expr] = expr_values
@@ -956,7 +991,7 @@ def eval_variables(state: workflow.State, exprs, df, locals_d=None):
 #     return utilities
 
 
-def set_skim_wrapper_targets(df, skims):
+def set_skim_wrapper_targets(df, skims, allow_partial_success: bool = True):
     """
     Add the dataframe to the SkimWrapper object so that it can be dereferenced
     using the parameters of the skims object.
@@ -974,6 +1009,11 @@ def set_skim_wrapper_targets(df, skims):
         dataframe that comes back from interacting choosers with
         alternatives.  See the skims module for more documentation on how
         the skims object is intended to be used.
+    allow_partial_success : bool, optional
+        If True (default), failures to set skim targets for some skim objects
+        (for example due to missing required columns in `df`) will be collected
+        and logged as warnings but will not raise an exception. If False, any
+        such failure will be raised immediately, preventing partial success.
     """
 
     skims = (
@@ -983,13 +1023,31 @@ def set_skim_wrapper_targets(df, skims):
         if isinstance(skims, dict)
         else [skims]
     )
+    problems = []
 
     # assume any object in skims can be treated as a skim
     for skim in skims:
         try:
             skim.set_df(df)
         except AttributeError:
+            # sometimes when passed as a dict, the skims have a few keys given as
+            # settings or constants, which are not actually "skim" objects and have
+            # no `set_df` attribute.  This is fine and we just let them pass.
             pass
+        except AssertionError as e:
+            # An assertion error will get triggered if the columns of `df` are
+            # missing one of the required keys needed to look up values in the
+            # skims.  This may not be a problem, if this particular set of skims
+            # is not actually used in this model component.  So we'll warn about
+            # it but usually not raise a showstopping error.
+            problems.append(e)
+            if not allow_partial_success:
+                raise
+
+    if problems:
+        # if problems were discovered, log them as warnings
+        for problem in problems:
+            logger.warning(str(problem))
 
 
 #
@@ -1606,11 +1664,13 @@ def tvpb_skims(skims):
         return (
             skims
             if isinstance(skims, list)
-            else skims.values()
-            if isinstance(skims, dict)
-            else [skims]
-            if skims is not None
-            else []
+            else (
+                skims.values()
+                if isinstance(skims, dict)
+                else [skims]
+                if skims is not None
+                else []
+            )
         )
 
     return [
@@ -2091,3 +2151,5 @@ def simple_simulate_logsums(
     assert len(logsums.index == len(choosers.index))
 
     return logsums
+
+
