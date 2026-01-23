@@ -701,6 +701,7 @@ class Settings(PydanticBase, extra="allow", validate_assignment=True):
         "memory_profile",
         "instrument",
         "sharrow",
+        "use_explicit_error_terms",
     )
     """
     Setting to log on startup.
@@ -778,7 +779,18 @@ class Settings(PydanticBase, extra="allow", validate_assignment=True):
     """
     run checks to validate that YAML settings files are loadable and spec and coefficent csv can be resolved.
 
-    should catch many common errors early, including missing required configurations or specified coefficient labels without defined values.  
+    should catch many common errors early, including missing required configurations or specified coefficient labels without defined values.
+    """
+
+    use_explicit_error_terms: bool = False
+    """
+    Make choice from random utility model by drawing from distribution of unobserved
+    part of utility and taking the maximum of total utility.
+
+    Defaults to standard Monte Carlo method, i.e., calculating probabilities and then
+    drawing a single uniform random number to draw from cumulative probabily.
+
+    .. versionadded:: 1.x
     """
 
     other_settings: dict[str, Any] = None
