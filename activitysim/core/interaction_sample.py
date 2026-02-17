@@ -119,19 +119,20 @@ def _poisson_sample_alternatives(alternative_count, chunk_sizer: ChunkSizer, pro
     n = 0
     probs_subset = probs
     inclusion_probs_subset = inclusion_probs
-    sampled_alts_collection = []
+    sampled_alternatives = pd.DataFrame(0.0, index=inclusion_probs.index, columns=inclusion_probs.columns)
     while True:
         sampled_results_subset = _poisson_sample_alternatives_inner(
             alternative_count, probs_subset, inclusion_probs_subset, state, trace_label, chunk_sizer
         )
         no_alts_sampled_mask = sampled_results_subset.isna().all(axis=1)
+        alts_with_sampled_alternatives = sampled_results_subset[~no_alts_sampled_mask]
+        sampled_alternatives.loc[alts_with_sampled_alternatives.index, :] = alts_with_sampled_alternatives
         if no_alts_sampled_mask.any():
-            sampled_alts_collection.append(sampled_results_subset[~no_alts_sampled_mask])
+            logger.info(f"Poisson sampling of alternatives failed with {n=}, retrying")
             probs_subset = probs[no_alts_sampled_mask]
             inclusion_probs_subset = inclusion_probs[no_alts_sampled_mask]
 
         else:  # All alternatives are fine
-            sampled_alts_collection.append(sampled_results_subset)
             break
 
         n += 1
@@ -140,7 +141,6 @@ def _poisson_sample_alternatives(alternative_count, chunk_sizer: ChunkSizer, pro
             msg = f"Poisson choice set sampling failed after 10 attempts for these cases:\n{choosers_no_alts_sampled}\n{probs_subset}"
             raise ValueError(msg)
 
-    sampled_alternatives = pd.concat(sampled_alts_collection)
     chunk_sizer.log_df(trace_label, "sampled_alternatives", sampled_alternatives)
     return inclusion_probs, sampled_alternatives
 
