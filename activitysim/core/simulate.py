@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import time
+import typing
 import warnings
 from collections import OrderedDict
 from collections.abc import Callable
@@ -32,7 +33,7 @@ from activitysim.core.configuration.logit import (
     LogitNestSpec,
     TemplatedLogitComponentSettings,
 )
-from activitysim.core.estimation import Estimator
+
 from activitysim.core.exceptions import ModelConfigurationError
 from activitysim.core.fast_eval import fast_eval
 from activitysim.core.simulate_consts import (
@@ -41,6 +42,9 @@ from activitysim.core.simulate_consts import (
     SPEC_EXPRESSION_NAME,
     SPEC_LABEL_NAME,
 )
+if typing.TYPE_CHECKING:
+    from activitysim.core.estimation import Estimator
+
 
 logger = logging.getLogger(__name__)
 

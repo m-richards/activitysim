@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import logging
+import typing
 
 import numpy as np
 import pandas as pd
-
 from activitysim.core import (
     chunk,
     estimation,
@@ -22,7 +22,8 @@ from activitysim.core.configuration.base import ComputeSettings
 from activitysim.core.exceptions import SegmentedSpecificationError
 from activitysim.core.skim_dataset import DatasetWrapper
 from activitysim.core.skim_dictionary import SkimWrapper
-from activitysim.core.workflow import State
+if typing.TYPE_CHECKING:
+    from activitysim.core.random import Random
 
 logger = logging.getLogger(__name__)
 
@@ -33,11 +34,11 @@ def _poisson_sample_alternatives_inner(
     alternative_count: int,
     probs: pd.DataFrame,
     poisson_inclusion_probs: pd.DataFrame,
-    state: State,
+    rng: Random,
     trace_label: str | None,
     chunk_sizer:ChunkSizer,
 ) -> pd.DataFrame:
-    rands = state.get_rn_generator().random_for_df(probs, n=alternative_count)
+    rands = rng.random_for_df(probs, n=alternative_count)
     chunk_sizer.log_df(trace_label, "rands", rands)
     sampled_mask = rands < poisson_inclusion_probs
     sampled_results = probs.where(sampled_mask)
@@ -111,7 +112,7 @@ def make_sample_choices_utility_based(
 
 
 def _poisson_sample_alternatives(alternative_count, chunk_sizer: ChunkSizer, probs: pd.DataFrame, sample_size,
-                                 state: State, trace_label: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+                                 state: workflow.State, trace_label: str) -> tuple[pd.DataFrame, pd.DataFrame]:
     # compute the inclusion probability as the reciprocal of alt never being drawn
     #  -- these are common, so compute once upfront
     inclusion_probs = 1 - (1 - probs) ** sample_size
@@ -122,12 +123,14 @@ def _poisson_sample_alternatives(alternative_count, chunk_sizer: ChunkSizer, pro
     sampled_alternatives = pd.DataFrame(0.0, index=inclusion_probs.index, columns=inclusion_probs.columns)
     while True:
         sampled_results_subset = _poisson_sample_alternatives_inner(
-            alternative_count, probs_subset, inclusion_probs_subset, state, trace_label, chunk_sizer
+            alternative_count, probs_subset, inclusion_probs_subset, state.get_rn_generator(), trace_label, chunk_sizer
         )
         no_alts_sampled_mask = sampled_results_subset.isna().all(axis=1)
         alts_with_sampled_alternatives = sampled_results_subset[~no_alts_sampled_mask]
         sampled_alternatives.loc[alts_with_sampled_alternatives.index, :] = alts_with_sampled_alternatives
         if no_alts_sampled_mask.any():
+            # TODO if this happens in base but the project case is such that something is picked, random numbers won't
+            #  be consistent - we're asserting that this is very rare models where the sample size is not too small
             logger.info(f"Poisson sampling of alternatives failed with {n=}, retrying")
             probs_subset = probs[no_alts_sampled_mask]
             inclusion_probs_subset = inclusion_probs[no_alts_sampled_mask]
@@ -138,7 +141,8 @@ def _poisson_sample_alternatives(alternative_count, chunk_sizer: ChunkSizer, pro
         n += 1
         if n == 10:
             choosers_no_alts_sampled = sampled_results_subset[no_alts_sampled_mask]
-            msg = f"Poisson choice set sampling failed after 10 attempts for these cases:\n{choosers_no_alts_sampled}\n{probs_subset}"
+            msg = (f"Poisson choice set sampling failed after 10 attempts for these cases:\n"
+                   f"{choosers_no_alts_sampled}\n{probs_subset}")
             raise ValueError(msg)
 
     chunk_sizer.log_df(trace_label, "sampled_alternatives", sampled_alternatives)
@@ -744,8 +748,8 @@ def _ensure_chosen_alts_in_sample(
     choices_df: pd.DataFrame,
     choosers: pd.DataFrame,
     probs: pd.DataFrame,
-    state: State,
-    trace_label,
+    state: workflow.State,
+    trace_label:str,
 ) -> pd.DataFrame:
     # we need to ensure chosen alternative is included in the sample
     survey_choices = estimation.manager.get_survey_destination_choices(
