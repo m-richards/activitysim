@@ -113,7 +113,8 @@ def _poisson_sample_alternatives(alternative_count, chunk_sizer: ChunkSizer, pro
                                  state: workflow.State, trace_label: str) -> tuple[pd.DataFrame, pd.DataFrame]:
     # compute the inclusion probability as the reciprocal of alt never being drawn
     #  -- these are common, so compute once upfront
-    inclusion_probs = 1 - (1 - probs) ** sample_size
+    exclusion_probs = (1 - probs) ** sample_size
+    inclusion_probs = 1 - exclusion_probs
 
     n = 0
     probs_subset = probs
@@ -144,6 +145,8 @@ def _poisson_sample_alternatives(alternative_count, chunk_sizer: ChunkSizer, pro
             raise ValueError(msg)
 
     chunk_sizer.log_df(trace_label, "sampled_alternatives", sampled_alternatives)
+    # TODO put this behind a debug guard, because it will be slow
+    logger.info(f"Sampled size was {sample_size}, poisson method mean expected sample size was {inclusion_probs.sum(axis=1).mean():.1f}, actual sampled mean was {(sampled_alternatives>0).sum(axis=1).mean():.1f} and highest zero selection prob was {(exclusion_probs).product(axis=1).max():.2g}")
     return inclusion_probs, sampled_alternatives
 
 
@@ -886,8 +889,17 @@ def interaction_sample(
         assert choosers.index.is_monotonic_increasing
 
     # FIXME - legacy logic - not sure this is needed or even correct?
-    sample_size = min(sample_size, len(alternatives.index))
-    logger.info(f" --- interaction_sample sample size = {sample_size}")
+    if len(alternatives.index) <=sample_size:
+        sample_size = len(alternatives.index)
+        use_eet = state.settings.use_explicit_error_terms
+        if use_eet:
+            # TODO Poisson sampling, if # alts <= sample_size, overwrite and disable sampling?
+            logger.info(f" --- interaction_sample disabled for poisson sampling as there were {sample_size} alternatives,"
+                        f"which is less than the sample size requested.")
+            sample_size = 0
+
+    else:
+        logger.info(f" --- interaction_sample sample size = {sample_size}")
 
     result_list = []
     for (
