@@ -131,6 +131,9 @@ def _poisson_sample_alternatives(alternative_count, chunk_sizer: ChunkSizer, pro
             # TODO if this happens in base but the project case is such that something is picked, random numbers won't
             #  be consistent - we're asserting that this is very rare models where the sample size is not too small
             logger.info(f"Poisson sampling of alternatives failed with {n=}, retrying")
+            # TODO put this behind a debug guard, because it will be slow
+            logger.info(
+                f"Sampled size was {sample_size}, poisson method mean expected sample size was {inclusion_probs.sum(axis=1).mean():.1f}, actual sampled mean was {(sampled_alternatives > 0).sum(axis=1).mean():.1f} and highest zero selection prob was {(exclusion_probs).product(axis=1).max():.2g}")
             probs_subset = probs[no_alts_sampled_mask]
             inclusion_probs_subset = inclusion_probs[no_alts_sampled_mask]
 
@@ -145,8 +148,7 @@ def _poisson_sample_alternatives(alternative_count, chunk_sizer: ChunkSizer, pro
             raise ValueError(msg)
 
     chunk_sizer.log_df(trace_label, "sampled_alternatives", sampled_alternatives)
-    # TODO put this behind a debug guard, because it will be slow
-    logger.info(f"Sampled size was {sample_size}, poisson method mean expected sample size was {inclusion_probs.sum(axis=1).mean():.1f}, actual sampled mean was {(sampled_alternatives>0).sum(axis=1).mean():.1f} and highest zero selection prob was {(exclusion_probs).product(axis=1).max():.2g}")
+
     return inclusion_probs, sampled_alternatives
 
 
@@ -894,9 +896,11 @@ def interaction_sample(
         use_eet = state.settings.use_explicit_error_terms
         if use_eet:
             # TODO Poisson sampling, if # alts <= sample_size, overwrite and disable sampling?
+            # TODO if you had land use changes in the project case this might not be desirable, it would
+            # trigger inconsistency in the RNG
             logger.info(f" --- interaction_sample disabled for poisson sampling as there were {sample_size} alternatives,"
                         f"which is less than the sample size requested.")
-            sample_size = 0
+            # sample_size = 0
 
     else:
         logger.info(f" --- interaction_sample sample size = {sample_size}")
