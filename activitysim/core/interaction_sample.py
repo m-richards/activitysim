@@ -22,6 +22,8 @@ from activitysim.core.configuration.base import ComputeSettings
 from activitysim.core.exceptions import SegmentedSpecificationError
 from activitysim.core.skim_dataset import DatasetWrapper
 from activitysim.core.skim_dictionary import SkimWrapper
+from activitysim.core.tester import TEST_CASE
+
 if typing.TYPE_CHECKING:
     from activitysim.core.random import Random
 
@@ -39,6 +41,8 @@ def _poisson_sample_alternatives_inner(
     chunk_sizer:ChunkSizer,
 ) -> pd.DataFrame:
     rands = rng.random_for_df(probs, n=alternative_count)
+    np.set_printoptions(precision=3)
+    logger.info(f"rands:\n{rands[:5, :]}")
     chunk_sizer.log_df(trace_label, "rands", rands)
     sampled_mask = rands < poisson_inclusion_probs
     sampled_results = probs.where(sampled_mask)
@@ -89,6 +93,11 @@ def make_sample_choices_utility_based(
         overflow_protection=not allow_zero_probs,
         trace_choosers=choosers,
     )
+
+    test_probs = probs[probs.index == TEST_CASE]
+    if len(test_probs) >0:
+        logger.info(f"testCase probs:\n{test_probs}")
+
     inclusion_probs, sampled_alternatives = _poisson_sample_alternatives(alternative_count, chunk_sizer, probs,
                                                                          sample_size, state, trace_label)
 
@@ -99,8 +108,16 @@ def make_sample_choices_utility_based(
         .stack()
         .reset_index(name="prob")
         .assign(**{alt_col_name: lambda df: alternatives.index.values[df["alt_idx"]]})
-        .drop(columns=["alt_idx"])
+        # .drop(columns=["alt_idx"]) # TODO temp
     )
+    pd.options.display.max_columns = 100
+    pd.options.display.width =200
+    logger.info(f"Sample Choices:\n{choices_df.head(10)}")
+    tmp = choices_df[choices_df['person_id'] == TEST_CASE]
+    if len(tmp) >0:
+        logger.info(f"TestCase choices:\n{tmp}")
+    if 107882 in choices_df.index:
+        logger.info(f"choices were 107882\n{choices_df.loc[[107882], :]}")
 
     # Here we return the inclusion probabilities i.e. the true probability of being sampled and (ab)use the fact
     # that pick_count=1 by definition and ln(1)=0 and recover the standard sample correction term.
@@ -888,7 +905,7 @@ def interaction_sample(
         if use_eet:
             # TODO Poisson sampling, if # alts <= sample_size, overwrite and disable sampling?
             # TODO if you had land use changes in the project case this might not be desirable, it would
-            # trigger inconsistency in the RNG
+            #  trigger inconsistency in the RNG if this were triggered in the base, but not project
             logger.info(f" --- interaction_sample disabled for poisson sampling as there were {sample_size} alternatives,"
                         f"which is less than the sample size requested.")
             # sample_size = 0

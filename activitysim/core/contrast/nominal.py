@@ -176,7 +176,7 @@ def compare_nominal(
         encode["column"] = alt.Column(**col_g_kwd)
 
     if isinstance(categories, enum.EnumMeta):
-        categories = {i.value: i.name for i in categories}
+        categories = {i.values: i.name for i in categories}
     if categories:
         all_d[column_name] = all_d[column_name].map(categories)
 

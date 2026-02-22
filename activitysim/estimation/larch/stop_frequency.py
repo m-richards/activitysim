@@ -73,7 +73,7 @@ def stop_frequency_data(
         )
 
     for seg in segments:
-        for cname, value in segment_coef[seg].value.items():
+        for cname, value in segment_coef[seg].values.items():
             if cname in master_coef:
                 if master_coef[cname] == value:
                     coef_map[seg][cname] = cname

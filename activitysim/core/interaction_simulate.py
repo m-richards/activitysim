@@ -17,6 +17,7 @@ from activitysim.core import chunk, logit, simulate, timing, tracing, util, work
 from activitysim.core.configuration.base import ComputeSettings
 from activitysim.core.exceptions import SegmentedSpecificationError
 from activitysim.core.fast_eval import fast_eval
+from activitysim.core.tester import TEST_CASE
 
 logger = logging.getLogger(__name__)
 
@@ -953,6 +954,9 @@ def _interaction_simulate(
 
     # create a series with index from choosers and the index of the chosen alternative
     choices = pd.Series(choices, index=choosers.index)
+    logger.info(f"simualate choices were\n{choices}")
+    if TEST_CASE in choices.index:
+        logger.info(f"choices were 107882\n{choices.to_frame().loc[[TEST_CASE], :]}")
     chunk_sizer.log_df(trace_label, "choices", choices)
 
     if have_trace_targets:
