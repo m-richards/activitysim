@@ -2,6 +2,7 @@
 # See full license in LICENSE.txt.
 from __future__ import annotations
 
+
 import logging
 import typing
 
@@ -23,6 +24,9 @@ from activitysim.core.exceptions import SegmentedSpecificationError
 from activitysim.core.skim_dataset import DatasetWrapper
 from activitysim.core.skim_dictionary import SkimWrapper
 from activitysim.core.tester import TEST_CASE
+import pandas as pd
+# pd.options.display.max_columns = 100
+# pd.options.display.width = 200
 
 if typing.TYPE_CHECKING:
     from activitysim.core.random import Random
@@ -110,14 +114,11 @@ def make_sample_choices_utility_based(
         .assign(**{alt_col_name: lambda df: alternatives.index.values[df["alt_idx"]]})
         # .drop(columns=["alt_idx"]) # TODO temp
     )
-    pd.options.display.max_columns = 100
-    pd.options.display.width =200
+
     logger.info(f"Sample Choices:\n{choices_df.head(10)}")
     tmp = choices_df[choices_df['person_id'] == TEST_CASE]
     if len(tmp) >0:
         logger.info(f"TestCase choices:\n{tmp}")
-    if 107882 in choices_df.index:
-        logger.info(f"choices were 107882\n{choices_df.loc[[107882], :]}")
 
     # Here we return the inclusion probabilities i.e. the true probability of being sampled and (ab)use the fact
     # that pick_count=1 by definition and ln(1)=0 and recover the standard sample correction term.
@@ -906,12 +907,13 @@ def interaction_sample(
             # TODO Poisson sampling, if # alts <= sample_size, overwrite and disable sampling?
             # TODO if you had land use changes in the project case this might not be desirable, it would
             #  trigger inconsistency in the RNG if this were triggered in the base, but not project
-            logger.info(f" --- interaction_sample disabled for poisson sampling as there were {sample_size} alternatives,"
-                        f"which is less than the sample size requested.")
+            # logger.info(f" --- interaction_sample disabled for poisson sampling as there were {sample_size} alternatives,"
+            #             f"which is less than the sample size requested.")
+            # TODO below choice is not ideal for poisson, instead should just preserve sample size many draws?
             # sample_size = 0
+            pass
 
-    else:
-        logger.info(f" --- interaction_sample sample size = {sample_size}")
+    logger.info(f" --- interaction_sample sample size = {sample_size}")
 
     result_list = []
     for (

@@ -11,6 +11,7 @@ from activitysim.core import chunk, interaction_simulate, logit, tracing, util, 
 from activitysim.core.configuration.base import ComputeSettings
 from activitysim.core.exceptions import SegmentedSpecificationError
 from activitysim.core.simulate import set_skim_wrapper_targets
+from activitysim.core.tester import TEST_CASE
 
 logger = logging.getLogger(__name__)
 
@@ -204,6 +205,8 @@ def _interaction_sample_simulate(
     # column names of choosers match spec index values
     # utilities has utility value for element in the cross product of choosers and alternatives
     # interaction_utilities is a df with one utility column and one row per row in alternative
+    logger.info(f"interaction df:\n{interaction_df.head()}")
+    logger.info(f"TestCase interaction df:\n{interaction_df.loc[lambda df: df.index.isin(TEST_CASE)]}")
     (
         interaction_utilities,
         trace_eval_results,
@@ -263,6 +266,8 @@ def _interaction_sample_simulate(
     chunk_sizer.log_df(trace_label, "sample_counts", None)
 
     # insert the zero-prob utilities to pad each alternative set to same size
+    # TODO EET-poisson note that the fact that there is not N-samples as an upper cap on the number of alternatives
+    # means that on average this will consume more memory, not sure if this is currently a memory peak.
     padded_utilities = np.insert(interaction_utilities.utility.values, inserts, -999)
     chunk_sizer.log_df(trace_label, "padded_utilities", padded_utilities)
     del inserts
@@ -275,6 +280,8 @@ def _interaction_sample_simulate(
 
     # convert to a dataframe with one row per chooser and one column per alternative
     utilities_df = pd.DataFrame(padded_utilities, index=choosers.index)
+    logger.info(f"Raw utilities df:\n{utilities_df.head()}")
+    logger.info(f"TestCase Raw utilities df:\n{utilities_df.loc[lambda df: df.index.isin(TEST_CASE)]}")
     chunk_sizer.log_df(trace_label, "utilities_df", utilities_df)
 
     del padded_utilities

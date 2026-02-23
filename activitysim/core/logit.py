@@ -16,6 +16,7 @@ from activitysim.core.exceptions import (
     ModelConfigurationError,
     TableIndexError,
 )
+from activitysim.core.tester import TEST_CASE
 
 logger = logging.getLogger(__name__)
 
@@ -347,9 +348,11 @@ def utils_to_probs(
 # TODO-EET: add doc string, tracing
 def add_ev1_random(state: workflow.State, df: pd.DataFrame):
     nest_utils_for_choice = df.copy()
-    nest_utils_for_choice += state.get_rn_generator().gumbel_for_df(
-        nest_utils_for_choice, n=nest_utils_for_choice.shape[1]
-    )
+    logger.info(f"Utils pre ev1\n{df.loc[lambda df: df.index.isin(TEST_CASE)]}")
+    rands = state.get_rn_generator().gumbel_for_df(nest_utils_for_choice, n=nest_utils_for_choice.shape[1])
+    logger.info(f"Rands\n{rands.loc[lambda df: df.index.isin(TEST_CASE)]}")
+    nest_utils_for_choice += rands
+    logger.info(f"Utils post ev1\n{nest_utils_for_choice.loc[lambda df: df.index.isin(TEST_CASE)]}")
     return nest_utils_for_choice
 
 

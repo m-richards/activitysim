@@ -956,7 +956,7 @@ def _interaction_simulate(
     choices = pd.Series(choices, index=choosers.index)
     logger.info(f"simualate choices were\n{choices}")
     if TEST_CASE in choices.index:
-        logger.info(f"choices were 107882\n{choices.to_frame().loc[[TEST_CASE], :]}")
+        logger.info(f"TestCase choices were \n{choices.to_frame().loc[[TEST_CASE], :]}")
     chunk_sizer.log_df(trace_label, "choices", choices)
 
     if have_trace_targets:
