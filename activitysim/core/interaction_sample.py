@@ -50,6 +50,16 @@ def _poisson_sample_alternatives_inner(
     chunk_sizer.log_df(trace_label, "rands", rands)
     sampled_mask = rands < poisson_inclusion_probs
     sampled_results = probs.where(sampled_mask)
+    logger.info(f"TestCase Poisson rands:\n{pd.DataFrame(rands, index=probs.index).loc[lambda df: df.index.isin(TEST_CASE)]}")
+    logger.info(f"TestCase Poisson inclusion probs:\n{poisson_inclusion_probs.loc[lambda df: df.index.isin(TEST_CASE)]}")
+    logger.info(f"TestCase Poisson mask:\n{sampled_mask.loc[lambda df: df.index.isin(TEST_CASE)]}")
+    logger.info(f"TestCase Poisson results:\n{sampled_results.loc[lambda df: df.index.isin(TEST_CASE)]}")
+    logger.info(f"TestCase Poisson raw probs:\n{probs.loc[lambda df: df.index.isin(TEST_CASE)]}")
+    print(f"TestCase Poisson rands:\n{pd.DataFrame(rands, index=probs.index).loc[lambda df: df.index.isin(TEST_CASE)]}")
+    print(f"TestCase Poisson inclusion probs:\n{poisson_inclusion_probs.loc[lambda df: df.index.isin(TEST_CASE)]}")
+    print(f"TestCase Poisson mask:\n{sampled_mask.loc[lambda df: df.index.isin(TEST_CASE)]}")
+    print(f"TestCase Poisson results:\n{sampled_results.loc[lambda df: df.index.isin(TEST_CASE)]}")
+    print(f"TestCase Poisson raw probs:\n{probs.loc[lambda df: df.index.isin(TEST_CASE)]}")
     return sampled_results
 
 
@@ -577,6 +587,7 @@ def _interaction_sample(
         interaction_utilities.values.reshape(len(choosers), alternative_count),
         index=choosers.index,
     )
+    logger.info(f"TestCase Utilities:\n{utilities.loc[lambda df: df.index.isin(TEST_CASE)]}")
     chunk_sizer.log_df(trace_label, "utilities", utilities)
 
     del interaction_utilities

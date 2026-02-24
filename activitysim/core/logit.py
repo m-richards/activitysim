@@ -371,7 +371,7 @@ def add_ev1_random(state: workflow.State, df: pd.DataFrame, n_alts: int | None =
         rands[mask] = 0 # zero out the masked zones so they don't have the util adjustment of alt 0
     else:
         rands = state.get_rn_generator().gumbel_for_df(nest_utils_for_choice, n=nest_utils_for_choice.shape[1])
-
+    logger.info(f"Alt_nrs_mapping\n{alt_nrs_df.loc[lambda df: df.index.isin(TEST_CASE)]}")
     logger.info(f"Utils pre ev1\n{df.loc[lambda df: df.index.isin(TEST_CASE)]}")
     logger.info(f"Rands\n{pd.DataFrame(rands, index=df.index).loc[lambda df: df.index.isin(TEST_CASE)]}")
     nest_utils_for_choice += rands
