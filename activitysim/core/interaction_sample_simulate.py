@@ -223,9 +223,6 @@ def _interaction_sample_simulate(
     )
     chunk_sizer.log_df(trace_label, "interaction_utilities", interaction_utilities)
 
-    del interaction_df
-    chunk_sizer.log_df(trace_label, "interaction_df", None)
-
     if have_trace_targets:
         state.tracing.trace_interaction_eval_results(
             trace_eval_results,
@@ -270,10 +267,13 @@ def _interaction_sample_simulate(
     # means that on average this will consume more memory, not sure if this is currently a memory peak.
     padded_utilities = np.insert(interaction_utilities.utility.values, inserts, -999)
     padded_alt_nrs = np.insert(interaction_df[choice_column], inserts, -999)
-    chunk_sizer.log_df(trace_label, "padded_utilities", padded_utilities)
-    del inserts
 
+    chunk_sizer.log_df(trace_label, "padded_utilities", padded_utilities)
+    chunk_sizer.log_df(trace_label, "padded_alt_nrs", padded_alt_nrs)
+    del inserts
     del interaction_utilities
+    del interaction_df
+    chunk_sizer.log_df(trace_label, "interaction_df", None)
     chunk_sizer.log_df(trace_label, "interaction_utilities", None)
 
     # reshape to array with one row per chooser, one column per alternative
@@ -285,8 +285,6 @@ def _interaction_sample_simulate(
     # alt_nrs_df has columns for each alt in the choice set, with values indicating which alt_id
     # they correspond to (as opposed to the 0-n index implied by the column number).
     alt_nrs_df = pd.DataFrame(padded_alt_nrs, index=choosers.index)
-    logger.info(f"Raw utilities df:\n{utilities_df.head()}")
-    logger.info(f"TestCase Raw utilities df:\n{utilities_df.loc[lambda df: df.index.isin(TEST_CASE)]}")
     chunk_sizer.log_df(trace_label, "utilities_df", utilities_df)
 
     del padded_utilities
@@ -331,6 +329,7 @@ def _interaction_sample_simulate(
 
         # positions is series with the chosen alternative represented as a column index in utilities_df
         # which is an integer between zero and num alternatives in the alternative sample
+        n_zones = len(state.get_table("land_use").index)
         positions, rands = logit.make_choices_utility_based(
             state, utilities_df, trace_label=trace_label, trace_choosers=choosers, n_zones=n_zones,
             alt_nrs_df=alt_nrs_df
