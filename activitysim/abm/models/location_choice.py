@@ -603,6 +603,7 @@ def run_location_simulate(
     chunk_tag,
     trace_label,
     skip_choice=False,
+    n_alts: int | None = None,
 ):
     """
     run location model on location_sample annotated with mode_choice logsum
@@ -712,6 +713,7 @@ def run_location_simulate(
         compute_settings=model_settings.compute_settings.subcomponent_settings(
             "simulate"
         ),
+        n_alts=n_alts,
     )
 
     if not want_logsums:
@@ -788,6 +790,11 @@ def run_location_choice(
         if choosers.shape[0] == 0:
             logger.info(f"{trace_label} skipping segment {segment_name}: no choosers")
             continue
+        # using land use rather than size terms in case something goes 0 base -> nonzero project, double
+        # check if that would be in dest_size_terms as a zero
+        n_alts = len(dest_size_terms)
+        # assumes that dest_size_terms will always contain zeros for non-attractive zones, i.e. it will have the
+        # same length as land_use
 
         # - location_sample
         location_sample_df = run_location_sample(
@@ -841,6 +848,7 @@ def run_location_choice(
                 trace_label, "simulate.%s" % segment_name
             ),
             skip_choice=skip_choice,
+            n_alts=n_alts,
         )
 
         if estimator:

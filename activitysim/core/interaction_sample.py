@@ -891,19 +891,14 @@ def interaction_sample(
         assert choosers.index.is_monotonic_increasing
 
     # FIXME - legacy logic - not sure this is needed or even correct?
-    if len(alternatives.index) <=sample_size:
-        sample_size = len(alternatives.index)
-        use_eet = state.settings.use_explicit_error_terms
-        if use_eet:
-            # TODO Poisson sampling, if # alts <= sample_size, overwrite and disable sampling?
-            # TODO if you had land use changes in the project case this might not be desirable, it would
-            # trigger inconsistency in the RNG
-            logger.info(f" --- interaction_sample disabled for poisson sampling as there were {sample_size} alternatives,"
-                        f"which is less than the sample size requested.")
-            # sample_size = 0
+    if not state.settings.use_explicit_error_terms:
+        sample_size = min(sample_size, len(alternatives.index))
+        # with poisson sampling, definitely don't want to reduce sample size - it's not a sample size but a number
+        # of theoretical draws. Another options would be to disable sampling if # alts < sample size to ensure
+        # all are included (but this wouldn't behave well if there were land use changes in the project case which
+        # switched regimes)
 
-    else:
-        logger.info(f" --- interaction_sample sample size = {sample_size}")
+    logger.info(f" --- interaction_sample sample size = {sample_size}")
 
     result_list = []
     for (

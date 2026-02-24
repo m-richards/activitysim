@@ -314,6 +314,7 @@ def run_trip_scheduling_choice(
                 estimator=None,
                 chunk_sizer=chunk_sizer,
                 compute_settings=model_settings.compute_settings,
+                n_alts = schedules.shape[0]
             )
 
             assert len(choices.index) == len(choosers.index)
