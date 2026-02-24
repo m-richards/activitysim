@@ -269,6 +269,7 @@ def _interaction_sample_simulate(
     # TODO EET-poisson note that the fact that there is not N-samples as an upper cap on the number of alternatives
     # means that on average this will consume more memory, not sure if this is currently a memory peak.
     padded_utilities = np.insert(interaction_utilities.utility.values, inserts, -999)
+    padded_alt_nrs = np.insert(interaction_df[choice_column], inserts, -999)
     chunk_sizer.log_df(trace_label, "padded_utilities", padded_utilities)
     del inserts
 
@@ -277,9 +278,13 @@ def _interaction_sample_simulate(
 
     # reshape to array with one row per chooser, one column per alternative
     padded_utilities = padded_utilities.reshape(-1, max_sample_count)
+    padded_alt_nrs = padded_alt_nrs.reshape(-1, max_sample_count)
 
     # convert to a dataframe with one row per chooser and one column per alternative
     utilities_df = pd.DataFrame(padded_utilities, index=choosers.index)
+    # alt_nrs_df has columns for each alt in the choice set, with values indicating which alt_id
+    # they correspond to (as opposed to the 0-n index implied by the column number).
+    alt_nrs_df = pd.DataFrame(padded_alt_nrs, index=choosers.index)
     logger.info(f"Raw utilities df:\n{utilities_df.head()}")
     logger.info(f"TestCase Raw utilities df:\n{utilities_df.loc[lambda df: df.index.isin(TEST_CASE)]}")
     chunk_sizer.log_df(trace_label, "utilities_df", utilities_df)
@@ -327,7 +332,8 @@ def _interaction_sample_simulate(
         # positions is series with the chosen alternative represented as a column index in utilities_df
         # which is an integer between zero and num alternatives in the alternative sample
         positions, rands = logit.make_choices_utility_based(
-            state, utilities_df, trace_label=trace_label, trace_choosers=choosers
+            state, utilities_df, trace_label=trace_label, trace_choosers=choosers, n_zones=n_zones,
+            alt_nrs_df=alt_nrs_df
         )
 
         del utilities_df
