@@ -950,6 +950,7 @@ def trip_destination_simulate(
     skim_hotel,
     estimator,
     trace_label,
+    n_alts:int|None = None,
 ):
     """
     Chose destination from destination_sample (with od_logsum and dp_logsum columns added)
@@ -1036,6 +1037,7 @@ def trip_destination_simulate(
         trace_choice_name="trip_dest",
         estimator=estimator,
         explicit_chunk_size=model_settings.explicit_chunk,
+        n_alts=n_alts,
     )
 
     if not want_logsums:
@@ -1138,6 +1140,7 @@ def choose_trip_destination(
         skim_hotel=skim_hotel,
         estimator=estimator,
         trace_label=trace_label,
+        n_alts=len(alternatives),
     )
 
     dropped_trips = ~trips.index.isin(destinations.index)

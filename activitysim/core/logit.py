@@ -437,12 +437,12 @@ def make_choices_explicit_error_term_mnl(state, utilities, trace_label,
 
 def make_choices_explicit_error_term(
     state, utilities, alt_order_array, nest_spec=None, trace_label=None,
-        n_zones: int | None = None,
+        n_alts: int | None = None,
         alt_nrs_df: pd.DataFrame | None = None,
 ):
     trace_label = tracing.extend_trace_label(trace_label, "make_choices_eet")
     if nest_spec is None:
-        choices = make_choices_explicit_error_term_mnl(state, utilities, trace_label, n_zones, alt_nrs_df)
+        choices = make_choices_explicit_error_term_mnl(state, utilities, trace_label, n_alts, alt_nrs_df)
     else:
         choices = make_choices_explicit_error_term_nl(
             state, utilities, alt_order_array, nest_spec, trace_label
@@ -458,7 +458,7 @@ def make_choices_utility_based(
     trace_label: str | None = None,
     trace_choosers=None,
     allow_bad_probs=False,
-    n_zones: int | None = None,
+    n_alts: int | None = None,
     alt_nrs_df: pd.DataFrame | None = None,
 ) -> tuple[pd.Series, pd.Series]:
     trace_label = tracing.extend_trace_label(trace_label, "make_choices_utility_based")
@@ -466,7 +466,7 @@ def make_choices_utility_based(
     # TODO-EET: index of choices for nested utilities is different than unnested - this needs to be consistent for
     #  turning indexes into alternative names to keep code changes to minimum for now
     choices = make_choices_explicit_error_term(
-        state, utilities, name_mapping, nest_spec, trace_label, n_zones, alt_nrs_df
+        state, utilities, name_mapping, nest_spec, trace_label, n_alts, alt_nrs_df
     )
     # TODO-EET: rands - log all zeros for now
     rands = pd.Series(np.zeros_like(utilities.index.values), index=utilities.index)

@@ -112,6 +112,7 @@ def parking_destination_simulate(
     chunk_size,
     trace_hh_id,
     trace_label,
+    n_alts: int | None = None,
 ):
     """
     Chose destination from destination_sample (with od_logsum and dp_logsum columns added)
@@ -223,6 +224,9 @@ def choose_parking_location(
         chunk_size=chunk_size,
         trace_hh_id=trace_hh_id,
         trace_label=trace_label,
+        # len(destination_sample) would also be right because destination_sample isn't a sample
+        # but len(alternatives) seems safer
+        n_alts=len(alternatives)
     )
 
     if want_sample_table:
