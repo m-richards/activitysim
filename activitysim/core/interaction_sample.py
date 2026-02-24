@@ -98,7 +98,7 @@ def make_sample_choices_utility_based(
         trace_choosers=choosers,
     )
 
-    test_probs = probs[probs.index == TEST_CASE]
+    test_probs = probs[probs.index.isin(TEST_CASE)]
     if len(test_probs) >0:
         logger.info(f"testCase probs:\n{test_probs}")
 
@@ -116,7 +116,7 @@ def make_sample_choices_utility_based(
     )
 
     logger.info(f"Sample Choices:\n{choices_df.head(10)}")
-    tmp = choices_df[choices_df['person_id'] == TEST_CASE]
+    tmp = choices_df[choices_df['person_id'].isin(TEST_CASE)]
     if len(tmp) >0:
         logger.info(f"TestCase choices:\n{tmp}")
 
