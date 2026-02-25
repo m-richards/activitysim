@@ -357,11 +357,15 @@ def add_ev1_random(state: workflow.State, df: pd.DataFrame, n_alts: int | None =
                     alt_nrs_df is None), "n_zones and alt_nrs_df must both be provided or omitted together"
         idx_array = alt_nrs_df.values
         logger.info(f"{n_alts=}")
-        logger.info(f"{alt_nrs_df=}")
+        logger.info(f"alt_nrs_df:\n{alt_nrs_df}")
+        logger.info(f"alt_nrs_df.colums:{alt_nrs_df.columns}")
         logger.info(f"{idx_array=}")
 
         mask = idx_array == -999
-        safe_idx = np.where(mask, 0, idx_array)  # replace -999 with a temp value inbounds
+        safe_idx = np.where(mask, 1, idx_array)  # replace -999 with a temp value inbounds
+        logger.info(f"safe_idx min = {safe_idx.min()}, {safe_idx.max()}")
+        assert  len(safe_idx) == safe_idx.max() - safe_idx.min(), "assuming that zones are sequential, but they aren't"
+        # TODO do we need to account for non sequential zones with a factorize? / feed through indices further up?
 
         # generate random number for all alts - this is wasteful, but ensures that the same zone
         #  gets the same random number if the sampled choice set changes between base and project
