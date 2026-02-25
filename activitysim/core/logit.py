@@ -356,6 +356,10 @@ def add_ev1_random(state: workflow.State, df: pd.DataFrame, n_alts: int | None =
         assert (n_alts is None) == (
                     alt_nrs_df is None), "n_zones and alt_nrs_df must both be provided or omitted together"
         idx_array = alt_nrs_df.values
+        logger.info(f"{n_alts=}")
+        logger.info(f"{alt_nrs_df=}")
+        logger.info(f"{idx_array=}")
+
         mask = idx_array == -999
         safe_idx = np.where(mask, 0, idx_array)  # replace -999 with a temp value inbounds
 
@@ -365,6 +369,7 @@ def add_ev1_random(state: workflow.State, df: pd.DataFrame, n_alts: int | None =
         # Trade off is needing to seed (persons x zones) rows and multiindex channels to
         # avoid extra random numbers generated here. Quick benchmark suggests seeding per row is likely slower
         rands_dense = state.get_rn_generator().gumbel_for_df(nest_utils_for_choice, n=n_alts)
+        logger.info(f"{idx_array.shape=}, {safe_idx.shape=}, {rands_dense.shape=}")
         rands = np.take_along_axis(rands_dense, safe_idx, axis=1)
         rands[mask] = 0 # zero out the masked zones so they don't have the util adjustment of alt 0
     else:
