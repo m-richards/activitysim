@@ -357,7 +357,13 @@ def add_ev1_random(state: workflow.State, df: pd.DataFrame, n_alts: int | None =
                     alt_nrs_df is None), "n_zones and alt_nrs_df must both be provided or omitted together"
         idx_array = alt_nrs_df.values
         mask = idx_array == -999
-        safe_idx = np.where(mask, 0, idx_array)  # replace -999 with a temp value inbounds
+        safe_idx = np.where(mask, 1, idx_array)  # replace -999 with a temp value inbounds
+        idx_min = safe_idx.min()
+        # logger.info(f"safe_idx min = {idx_min}, {safe_idx.max()}, {safe_idx.shape}")
+        assert idx_min >=0
+        # Map from e.g. 1 -n labelling to 0-(n-1) indexing
+        # TODO deal with non sequential land use? ideally do where alt_nrs_df is constructed, not on the fly here. Potentially via state.get_injectable('network_los').get_skim_dict('taz').zone_ids
+        safe_idx = safe_idx - idx_min
 
         # generate random number for all alts - this is wasteful, but ensures that the same zone
         #  gets the same random number if the sampled choice set changes between base and project
