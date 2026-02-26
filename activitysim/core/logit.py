@@ -363,8 +363,12 @@ def add_ev1_random(state: workflow.State, df: pd.DataFrame, n_alts: int | None =
 
         mask = idx_array == -999
         safe_idx = np.where(mask, 1, idx_array)  # replace -999 with a temp value inbounds
-        logger.info(f"safe_idx min = {safe_idx.min()}, {safe_idx.max()}")
-        assert  len(safe_idx) == safe_idx.max() - safe_idx.min(), "assuming that zones are sequential, but they aren't"
+        idx_min = safe_idx.min()
+        logger.info(f"safe_idx min = {idx_min}, {safe_idx.max()}, {safe_idx.shape}")
+        assert idx_min >=0
+        # Map from e.g. 1 -n labelling to 0-(n-1) indexing
+        # TODO deal with non sequential land use? ideally do where alt_nrs_df is constructed, not on the fly here
+        safe_idx = safe_idx - idx_min
         # TODO do we need to account for non sequential zones with a factorize? / feed through indices further up?
 
         # generate random number for all alts - this is wasteful, but ensures that the same zone
