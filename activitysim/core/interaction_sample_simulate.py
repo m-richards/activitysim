@@ -256,7 +256,7 @@ def _interaction_sample_simulate(
     # (we want to insert dummy utilities at the END of the list of alternative utilities)
     # inserts is a list of the indices at which we want to do the insertions
     inserts = np.repeat(last_row_offsets, max_sample_count - sample_counts)
-
+    del last_row_offsets
     del sample_counts
     chunk_sizer.log_df(trace_label, "sample_counts", None)
 
@@ -286,6 +286,7 @@ def _interaction_sample_simulate(
     chunk_sizer.log_df(trace_label, "utilities_df", utilities_df)
 
     del padded_utilities
+    del padded_alt_nrs
     chunk_sizer.log_df(trace_label, "padded_utilities", None)
 
     if have_trace_targets:
