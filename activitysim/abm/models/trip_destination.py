@@ -1130,7 +1130,9 @@ def choose_trip_destination(
 
     t0 = print_elapsed_time("%s.compute_logsums" % trace_label, t0, debug=True)
     alt_dest_col_name = model_settings.ALT_DEST_COL_NAME
-    alts_context = AltsContext.from_series(alternatives[alt_dest_col_name])
+    alts = alternatives.index
+    assert alts.name == alt_dest_col_name
+    alts_context = AltsContext.from_series(alts)
     destinations = trip_destination_simulate(
         state,
         primary_purpose=primary_purpose,

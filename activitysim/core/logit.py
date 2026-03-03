@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import warnings
 from dataclasses import dataclass
+from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -358,7 +359,7 @@ class AltsContext:
         self.n_rands_to_sample = max(self.max_alt_id, self.n_alts_dense)
 
     @classmethod
-    def from_series(cls, ser:pd.Series)->"AltsContext":
+    def from_series(cls, ser:Union[pd.Series,pd.Index])->"AltsContext":
         min_alt_id = ser.min()
         max_alt_id = ser.max()
         return cls(min_alt_id, max_alt_id)
