@@ -17,6 +17,7 @@ from activitysim.core.configuration.logit import (
 )
 from activitysim.core.interaction_sample import interaction_sample
 from activitysim.core.interaction_sample_simulate import interaction_sample_simulate
+from activitysim.core.logit import AltsContext
 from activitysim.core.util import reindex
 from activitysim.core.exceptions import DuplicateWorkflowTableError
 
@@ -603,7 +604,7 @@ def run_location_simulate(
     chunk_tag,
     trace_label,
     skip_choice=False,
-    n_alts: int | None = None,
+    alts_context: AltsContext | None = None,
 ):
     """
     run location model on location_sample annotated with mode_choice logsum
@@ -713,7 +714,7 @@ def run_location_simulate(
         compute_settings=model_settings.compute_settings.subcomponent_settings(
             "simulate"
         ),
-        n_alts=n_alts,
+        alts_context=alts_context,
     )
 
     if not want_logsums:
@@ -792,7 +793,7 @@ def run_location_choice(
             continue
         # using land use rather than size terms in case something goes 0 base -> nonzero project, double
         # check if that would be in dest_size_terms as a zero
-        n_alts = len(dest_size_terms)
+        alts_context = AltsContext.from_series(dest_size_terms.index) # index zone_id, not ALT_DEST_COL_NAME
         # assumes that dest_size_terms will always contain zeros for non-attractive zones, i.e. it will have the
         # same length as land_use
 
@@ -848,7 +849,7 @@ def run_location_choice(
                 trace_label, "simulate.%s" % segment_name
             ),
             skip_choice=skip_choice,
-            n_alts=n_alts,
+            alts_context=alts_context,
         )
 
         if estimator:

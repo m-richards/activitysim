@@ -9,6 +9,7 @@ import pandas as pd
 
 from activitysim.core import chunk, interaction_simulate, logit, tracing, util, workflow
 from activitysim.core.configuration.base import ComputeSettings
+from activitysim.core.logit import AltsContext
 from activitysim.core.simulate import set_skim_wrapper_targets
 from activitysim.core.exceptions import SegmentedSpecificationError
 
@@ -34,7 +35,7 @@ def _interaction_sample_simulate(
     *,
     chunk_sizer: chunk.ChunkSizer,
     compute_settings: ComputeSettings | None = None,
-    n_alts: int | None = None,
+    alts_context: AltsContext | None = None,
 ):
     """
     Run a MNL simulation in the situation in which alternatives must
@@ -279,7 +280,7 @@ def _interaction_sample_simulate(
     utilities_df = pd.DataFrame(padded_utilities, index=choosers.index)
     # alt_nrs_df has columns for each alt in the choice set, with values indicating which alt_id
     # they correspond to (as opposed to the 0-n index implied by the column number).
-    if n_alts is not None:
+    if alts_context is not None:
         alt_nrs_df = pd.DataFrame(padded_alt_nrs, index=choosers.index)
     else:
         alt_nrs_df = None # if we don't provide the number of dense alternatives, assume that we'll use the old approach
@@ -329,7 +330,7 @@ def _interaction_sample_simulate(
         # positions is series with the chosen alternative represented as a column index in utilities_df
         # which is an integer between zero and num alternatives in the alternative sample
         positions, rands = logit.make_choices_utility_based(
-            state, utilities_df, trace_label=trace_label, trace_choosers=choosers, n_alts=n_alts,
+            state, utilities_df, trace_label=trace_label, trace_choosers=choosers, alts_context=alts_context,
             alt_nrs_df=alt_nrs_df
         )
 
@@ -461,7 +462,7 @@ def interaction_sample_simulate(
     skip_choice=False,
     explicit_chunk_size=0,
     *,
-    n_alts:int|None = None,
+    alts_context: AltsContext | None = None,
     compute_settings: ComputeSettings | None = None,
 ):
     """
@@ -507,7 +508,7 @@ def interaction_sample_simulate(
     explicit_chunk_size : float, optional
         If > 0, specifies the chunk size to use when chunking the interaction
         simulation. If < 1, specifies the fraction of the total number of choosers.
-    n_alts: int, optional
+    alts_context: int, optional
         The number of alternatives available in the choice set in the absense of sampling.
         This is used with EET simulation to ensure consistent random numbers across the whole alternative set
         ( as the sampled set may change between base and project). When not provided,
@@ -568,7 +569,7 @@ def interaction_sample_simulate(
             skip_choice,
             chunk_sizer=chunk_sizer,
             compute_settings=compute_settings,
-            n_alts=n_alts,
+            alts_context=alts_context,
         )
 
         result_list.append(choices)
