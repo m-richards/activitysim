@@ -32,6 +32,7 @@ from activitysim.core.configuration.base import PreprocessorSettings
 from activitysim.core.configuration.logit import LocationComponentSettings
 from activitysim.core.interaction_sample import interaction_sample
 from activitysim.core.interaction_sample_simulate import interaction_sample_simulate
+from activitysim.core.logit import AltsContext
 from activitysim.core.skim_dictionary import DataFrameMatrix
 from activitysim.core.tracing import print_elapsed_time
 from activitysim.core.util import assign_in_place, reindex
@@ -950,7 +951,7 @@ def trip_destination_simulate(
     skim_hotel,
     estimator,
     trace_label,
-    n_alts:int|None = None,
+    alts_context: AltsContext | None = None,
 ):
     """
     Chose destination from destination_sample (with od_logsum and dp_logsum columns added)
@@ -1037,7 +1038,7 @@ def trip_destination_simulate(
         trace_choice_name="trip_dest",
         estimator=estimator,
         explicit_chunk_size=model_settings.explicit_chunk,
-        n_alts=n_alts,
+        alts_context=alts_context,
     )
 
     if not want_logsums:
@@ -1128,7 +1129,8 @@ def choose_trip_destination(
         destination_sample["dp_logsum"] = 0.0
 
     t0 = print_elapsed_time("%s.compute_logsums" % trace_label, t0, debug=True)
-
+    alt_dest_col_name = model_settings.ALT_DEST_COL_NAME
+    alts_context = AltsContext.from_series(alternatives[alt_dest_col_name])
     destinations = trip_destination_simulate(
         state,
         primary_purpose=primary_purpose,
@@ -1140,7 +1142,7 @@ def choose_trip_destination(
         skim_hotel=skim_hotel,
         estimator=estimator,
         trace_label=trace_label,
-        n_alts=len(alternatives),
+        alts_context=alts_context,
     )
 
     dropped_trips = ~trips.index.isin(destinations.index)
