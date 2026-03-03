@@ -882,12 +882,13 @@ def interaction_sample(
         assert choosers.index.is_monotonic_increasing
 
     # FIXME - legacy logic - not sure this is needed or even correct?
-    if not state.settings.use_explicit_error_terms:
-        sample_size = min(sample_size, len(alternatives.index))
-        # with poisson sampling, definitely don't want to reduce sample size - it's not a sample size but a number
-        # of theoretical draws. Another options would be to disable sampling if # alts < sample size to ensure
-        # all are included (but this wouldn't behave well if there were land use changes in the project case which
-        # switched regimes)
+    sample_size = min(sample_size, len(alternatives.index))
+    # if not state.settings.use_explicit_error_terms:
+    #     sample_size = min(sample_size, len(alternatives.index))
+    #     # with poisson sampling, definitely don't want to reduce sample size - it's not a sample size but a number
+    #     # of theoretical draws. Another options would be to disable sampling if # alts < sample size to ensure
+    #     # all are included (but this wouldn't behave well if there were land use changes in the project case which
+    #     # switched regimes)
 
     logger.info(f" --- interaction_sample sample size = {sample_size}")
 
