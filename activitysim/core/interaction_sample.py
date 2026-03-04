@@ -41,7 +41,7 @@ def _poisson_sample_alternatives_inner(
     rands = rng.random_for_df(probs, n=alternative_count)
     chunk_sizer.log_df(trace_label, "rands", rands)
     sampled_mask = rands < poisson_inclusion_probs
-    sampled_results = probs.where(sampled_mask)
+    sampled_results = poisson_inclusion_probs.where(sampled_mask)
     return sampled_results
 
 
