@@ -356,7 +356,7 @@ class AltsContext:
     def __post_init__(self):
         # e.g. for zero based zones max_alt_id = n_alts - 1
         # but for 1 based zones, we don't need to add extra padding
-        self.n_rands_to_sample = max(self.max_alt_id, self.n_alts_dense)
+        self.n_rands_to_sample = max(self.max_alt_id, self.n_alts_to_cover_max_id)
 
     @classmethod
     def from_series(cls, ser:Union[pd.Series,pd.Index])->"AltsContext":
@@ -374,9 +374,9 @@ class AltsContext:
 
 
     @property
-    def n_alts_dense(self) -> int:
-        """If zones were non-consecutive, this would be an over-estimate."""
-        return self.max_alt_id - self.min_alt_id+1
+    def n_alts_to_cover_max_id(self) -> int:
+        """If zones were non-consecutive, this could be a big over-estimate."""
+        return self.max_alt_id+1
 
 
 # TODO-EET: add doc string, tracing
@@ -398,7 +398,7 @@ def add_ev1_random(state: workflow.State, df: pd.DataFrame, alt_info: AltsContex
         # (alternatively, one could seed a channel for (persons x zones) and use the zone seed to ensure consistency.
         # Trade off is needing to seed (persons x zones) rows and multiindex channels to
         # avoid extra random numbers generated here. Quick benchmark suggests seeding per row is likely slower
-        rands_dense = state.get_rn_generator().gumbel_for_df(nest_utils_for_choice, n=alt_info.n_alts_dense)
+        rands_dense = state.get_rn_generator().gumbel_for_df(nest_utils_for_choice, n=alt_info.n_alts_to_cover_max_id)
         # generate n=alt_info.max_alt_id+1 rather than n_alts so that indexing works
         # (this is drawing a random number for a redundant zeroth zone in 1 based zoning systems)
         # TODO deal with non 0->n-1 indexed land use more efficiently? ideally do where alt_nrs_df is constructed,
