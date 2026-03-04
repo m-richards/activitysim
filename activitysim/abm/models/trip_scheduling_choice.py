@@ -19,6 +19,7 @@ from activitysim.core.configuration.base import (
     PydanticReadable,
 )
 from activitysim.core.interaction_sample_simulate import _interaction_sample_simulate
+from activitysim.core.logit import AltsContext
 from activitysim.core.skim_dataset import SkimDataset
 from activitysim.core.skim_dictionary import SkimDict
 
@@ -275,7 +276,7 @@ def run_trip_scheduling_choice(
             choosers,
             chunk_trace_label,
             chunk_sizer,
-        ) in chunk.adaptive_chunked_choosers(state, indirect_tours, trace_label):
+        ) in chunk.adaptive_chunked_choosers(state, indirect_tours, trace_label, explicit_chunk_size=model_settings.explicit_chunk):
             # Sort the choosers and get the schedule alternatives
             choosers = choosers.sort_index()
             schedules = generate_schedule_alternatives(choosers).sort_index()
@@ -302,6 +303,7 @@ def run_trip_scheduling_choice(
                 estimator=None,
                 chunk_sizer=chunk_sizer,
                 compute_settings=model_settings.compute_settings,
+                alts_context= AltsContext(schedules[SCHEDULE_ID].min(), schedules[SCHEDULE_ID].max()),
             )
 
             assert len(choices.index) == len(choosers.index)
@@ -346,6 +348,13 @@ class TripSchedulingChoiceSettings(PydanticReadable, extra="forbid"):
 
     compute_settings: ComputeSettings = ComputeSettings()
     """Compute settings for this component."""
+
+    explicit_chunk: float = 0
+    """
+    If > 0, use this chunk size instead of adaptive chunking.
+    If less than 1, use this fraction of the total number of rows.
+    """
+
 
 
 @workflow.step
