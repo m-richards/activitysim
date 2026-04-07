@@ -756,49 +756,6 @@ def _interaction_sample(
     return choices_df
 
 
-def _ensure_chosen_alts_in_sample(
-    alt_col_name,
-    alternatives: pd.DataFrame,
-    choices_df: pd.DataFrame,
-    choosers: pd.DataFrame,
-    probs: pd.DataFrame,
-    state: workflow.State,
-    trace_label:str,
-) -> pd.DataFrame:
-    # we need to ensure chosen alternative is included in the sample
-    survey_choices = estimation.manager.get_survey_destination_choices(
-        state, choosers, trace_label
-    )
-    if survey_choices is not None:
-        assert (
-            survey_choices.index == choosers.index
-        ).all(), "survey_choices and choosers must have the same index"
-        survey_choices.name = alt_col_name
-        survey_choices = survey_choices.dropna().astype(choices_df[alt_col_name].dtype)
-
-        # merge all survey choices onto choices_df
-        probs_df = probs.reset_index().melt(
-            id_vars=[choosers.index.name],
-            var_name=alt_col_name,
-            value_name="prob",
-        )
-        # probs are numbered 0..n-1 so we need to map back to alt ids
-        zone_map = pd.Series(alternatives.index).to_dict()
-        probs_df[alt_col_name] = probs_df[alt_col_name].map(zone_map)
-
-        survey_choices = pd.merge(
-            survey_choices,
-            probs_df,
-            on=[choosers.index.name, alt_col_name],
-            how="left",
-        )
-        survey_choices["rand"] = 0
-        survey_choices["prob"].fillna(0, inplace=True)
-        choices_df = pd.concat([choices_df, survey_choices], ignore_index=True)
-        choices_df.sort_values(by=[choosers.index.name], inplace=True)
-    return choices_df
-
-
 def interaction_sample(
     state: workflow.State,
     choosers: pd.DataFrame,
